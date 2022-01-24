@@ -167,6 +167,13 @@ spec:
               secretKeyRef:
                 name: devops-course-db
                 key: password
+          - name: NEW_RELIC_LICENSE_KEY # previously added via `kubectl create secret generic devops-course-nr --from-literal=newreliclicense=YOUR_NR_TOKEN`
+            valueFrom:
+              secretKeyRef:
+                name: devops-course-newrelic
+                key: newreliclicense
+          - name: SPRING_PROFILE
+            value: integration
 ---
 
 kind: ConfigMap
@@ -176,12 +183,18 @@ metadata:
 data:
   application.yml: |-
     spring:
-     cloud:
-      kubernetes:
-        discovery:
-          all-namespaces: false
-          service-labels:
-            spring-boot: true
+      cloud:
+        kubernetes:
+          discovery:
+            all-namespaces: false
+              service-labels:
+                spring-boot: true
+    management
+      metrics
+        export
+          datadog
+            api-key: ''
+            step: 30s
 ---
 
 apiVersion: v1

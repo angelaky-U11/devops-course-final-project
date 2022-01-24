@@ -1,7 +1,6 @@
 CREATE TABLE course
 (
-    id INT NOT NULL AUTO_INCREMENT,
+    id INT PRIMARY KEY AUTO_INCREMENT,
     title VARCHAR(255) NOT NULL,
-    presenter VARCHAR(255) NOT NULL,
-    PRIMARY KEY (id)
-) ENGINE=InnoDB;
+    presenter VARCHAR(255) NOT NULL
+);

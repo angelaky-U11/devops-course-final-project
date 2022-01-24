@@ -1,11 +1,12 @@
-# file: .github/workflows/preview.yaml
+name: CD workflow
+
 on:
-  pull_request:
-    types: [ closed ]
+  push:
+    #types: [ closed ]
     branches:
-      - main
+      - test_dido
 jobs:
-  build_and_publish_image_job:
+  deploy:
     # this job will only run if the PR has been merged
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
@@ -20,8 +21,8 @@ jobs:
       - run: |
           echo PR #${{ github.event.number }} has been merged
       - uses: actions/checkout@v2
-      - name: Build project
-        run: ./gradlew build
+#      - name: Build project
+#        run: ./gradlew build
       - name: Build a Docker image
         env:
           IMAGE_TAG: ${{ github.sha }}
