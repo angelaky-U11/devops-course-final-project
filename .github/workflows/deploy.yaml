@@ -9,7 +9,14 @@ jobs:
     # this job will only run if the PR has been merged
     #if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
+      - uses: act10ns/slack@v1
+        with:
+          status: starting
+          message: Starting Docker Build and Push...
+          if: always()
       - run: |
           echo PR #${{ github.event.number }} has been merged
       - uses: actions/checkout@v2
@@ -62,30 +69,12 @@ jobs:
         with:
           url-to-hit: https://devops-final-project-${{ secrets.OKTETO_NAMESPACE }}.cloud.okteto.net/course/1
           expected-statuses: "200"
-  slack_notification:
-    name: Slack Notification
-    runs-on: ubuntu-latest
-    steps:
-      - name: Slack Notification
-        uses: slackapi/slack-github-action@v1.17.0
+      - uses: act10ns/slack@v1
         with:
-            # For posting a rich message using Block Kit
-          payload: |
-            {
-              "text": "GitHub Action build result: ${{ job.status }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "GitHub Action build result: ${{ job.status }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
-                  }
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+          status: ${{ job.status }}
+          steps: ${{ toJson(steps) }}
+        if: always()
+
 
 #      - name: Deploy preview environment
 #        uses: okteto/deploy-preview@latest
