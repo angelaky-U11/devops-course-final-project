@@ -4,7 +4,7 @@ on:
   push:
     #types: [ closed ]
     branches:
-      - test_dido
+      - ani-test
 jobs:
   deploy:
     # this job will only run if the PR has been merged
