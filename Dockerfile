@@ -1,4 +1,4 @@
-FROM openjdk:16
+FROM openjdk:18
 #VOLUME /devops-final-project
 #ARG JAR_FILE=build/libs/devops-final-project-0.0.1.jar
 EXPOSE 10333
