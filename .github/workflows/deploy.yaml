@@ -22,7 +22,6 @@ jobs:
           echo PR #${{ github.event.number }} has been merged
       - uses: actions/checkout@v2
       - name: Build a Docker image
-        id: build_docker_image
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
