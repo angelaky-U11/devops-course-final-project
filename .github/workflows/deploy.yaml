@@ -16,8 +16,8 @@ jobs:
       - uses: act10ns/slack@v1
         with:
           status: starting
-          message: "@channel Starting Docker Build..."
-          if: always()
+          message: Starting Docker Build...
+        if: always()
       - run: |
           echo PR #${{ github.event.number }} has been merged
       - uses: actions/checkout@v2
