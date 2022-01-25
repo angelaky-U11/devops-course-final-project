@@ -1,0 +1,9 @@
+name: devops-final-project
+image: okteto/gradle:7.3
+command: bash
+volumes:
+  - /home/gradle/.gradle
+sync:
+  - .:/usr/src/app
+forward:
+  - 10333:10333

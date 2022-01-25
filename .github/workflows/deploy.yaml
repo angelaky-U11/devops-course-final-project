@@ -1,24 +1,65 @@
-# file: .github/workflows/preview.yaml
-on:
-  pull_request:
-    types: [closed]
-    branches:
-      - test
+name: CD workflow
 
+on:
+  push:
+    #types: [ closed ]
+    branches:
+      - ani-test
 jobs:
   deploy:
-    if: github.event.pull_request.merged == 'true'
+    # this job will only run if the PR has been merged
+    #if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-    - name: Context
-      uses: okteto/context@latest
-      with:
-        token: ${{ secrets.OKTETO_TOKEN }}
+      - run: |
+          echo PR #${{ github.event.number }} has been merged
+      - uses: actions/checkout@v2
+#      - name: Build project
+#        run: ./gradlew build
+      - name: Build a Docker image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/devops-final-project:${{ env.IMAGE_TAG }} . \
 
-    - name: Deploy preview environment
-      uses: okteto/deploy-preview@latest
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        name: pr-${{ github.event.number }}-cindylopez
-        timeout: 15m
+          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/devops-final-project:${{ env.IMAGE_TAG }} ${{ secrets.DOCKERHUB_USERNAME }}/devops-final-project:latest
+      - name: Log in to Docker Hub
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Publish docker image
+        #if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+        run: docker push --all-tags ${{ secrets.DOCKERHUB_USERNAME }}/devops-final-project
+      - name: Context
+        uses: okteto/context@latest
+        with:
+          token: ${{ secrets.OKTETO_TOKEN }}
+#       - name: Build
+#         uses: okteto/actions/build@v1
+#         with:
+#           token: ${{ secrets.OKTETO_TOKEN }}
+#           tag: ${{ secrets.DOCKERHUB_USERNAME }}/devops-final-project:${{ github.sha }}
+      - name: Get Kubeconfig
+        uses: okteto/actions/namespace@v1
+        id: kubeconf-step
+        with:
+          token: ${{ secrets.OKTETO_TOKEN }}
+          namespace: ${{ secrets.OKTETO_NAMESPACE }}
+      - name: Deploy and Wait
+        uses: okteto/actions/deploy@v1
+#        env:
+#          KUBECONFIG: ${{ steps.kubeconf-step.outputs.kubeconfig }}
+        with:
+          namespace: ${{ secrets.OKTETO_NAMESPACE }}
+          manifest: k8s.yml
+          tag: ${{ secrets.DOCKERHUB_USERNAME }}/devops-final-project:${{ github.sha }}
+          waitOn: deployment/devops-final-project
+      - name: Sleep for 90 seconds
+        run: sleep 90s
+        shell: bash
+      - name: Verify
+        uses: srt32/uptime@master
+        with:
+          url-to-hit: https://devops-final-project-${{ secrets.OKTETO_NAMESPACE }}.cloud.okteto.net/course/1
+          expected-statuses: "200"

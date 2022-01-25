@@ -1,22 +1,22 @@
 version: "3"
 services:
-  mysql8:
-    image: mysql:8
-    command:  --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-    network_mode: bridge
-    container_name: mysql8
-    volumes:
-      - mysql8-data:/var/lib/mysql8/data
-    expose:
-      - 3307
-    ports:
-      - "3307:3307"
-    environment:
-      - MYSQL_ROOT_PASSWORD=admin
-      - MYSQL_PASSWORD=admin
-      - MYSQL_USER=telerik
-      - MYSQL_DATABASE=devops_db
-    restart: unless-stopped
+#  mysql8:
+#    image: mysql:8
+#    command:  --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+#    network_mode: bridge
+#    container_name: mysql8
+#    volumes:
+#      - mysql8-data:/var/lib/mysql8/data
+#    expose:
+#      - 3307
+#    ports:
+#      - "3307:3307"
+#    environment:
+#      - MYSQL_ROOT_PASSWORD=admin
+#      - MYSQL_PASSWORD=admin
+#      - MYSQL_USER=telerik
+#      - MYSQL_DATABASE=devops_db
+#    restart: unless-stopped
   # APP*****************************************
   devops-project-app:
     build:
@@ -28,12 +28,12 @@ services:
     ports:
       - "10333:10333"
     restart: "no"
-    depends_on:
-      - mysql8
-    links:
-      - mysql8
+#    depends_on:
+#      - mysql8
+#    links:
+#      - mysql8
     tty: true
     stdin_open: true
 
-volumes:
-  mysql8-data:
+#volumes:
+#  mysql8-data:

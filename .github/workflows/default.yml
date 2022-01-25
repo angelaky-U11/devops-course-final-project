@@ -1,24 +1,16 @@
 # This is a basic workflow to help you get started with Actions
 
-name: test
+name: CI workflow
 
 # Controls when the action will run. Triggers the workflow on push or pull request
-# events but only for the develop branch
 on:
-  push:
-    branches: [ test ]
+  pull_request:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  test-project:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
     - name: Set up JDK 11
       uses: actions/setup-java@v1
@@ -27,14 +19,79 @@ jobs:
         distribution: 'adopt'
     - name: Validate Gradle wrapper
       uses: gradle/wrapper-validation-action@e6e38bacfdf1a337459f332974bb2327a31aaf4b
-    - name: Build with Gradle
-      uses: gradle/gradle-build-action@4137be6a8bf7d7133955359dbd952c0ca73b1021
-      with:
-        arguments: build
-  
-#     - name: Grant execute permission for gradlew
-#       run: chmod +x gradlew
+    - name: Run unit and integration tests
+      run: ./gradlew check
+  SAST:
+    needs: test-project
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
-#     - name: Test coverage with Gradle
-#       run: >
-#         ./gradlew testCoverage
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 11
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+          distribution: 'adopt'
+      - name: Execute Jacoco Report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew sonarqube
+  security:
+    needs: test-project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/gradle-jdk11@master
+        continue-on-error: true # To make sure that SARIF upload gets called
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: "--severity-threshold=critical --sarif-file-output=snyk.sarif"
+      - name: Upload result to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: snyk.sarif
+  docker-image-scan:
+    needs: [SAST, security]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+#      - name: Build project
+#        run: ./gradlew build
+      - name: Build a Docker image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/devops-final-project:${{ env.IMAGE_TAG }} . \
+
+          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/devops-final-project:${{ env.IMAGE_TAG }} ${{ secrets.DOCKERHUB_USERNAME }}/devops-final-project:latest
+      - name: Security scan on docker image
+        uses: snyk/actions/docker@master
+        id: docker-image-scan
+        continue-on-error: true
+        env:
+          # In order to use the Snyk Action you will need to have a Snyk API token.
+          # More details in https://github.com/snyk/actions#getting-your-snyk-token
+          # or you can signup for free at https://snyk.io/login
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: ${{ secrets.DOCKERHUB_USERNAME }}/devops-final-project
+          args: --file=Dockerfile
+            --severity-threshold=critical
+            --sarif-file-output=docker.snyk.sarif
+          sarif: false
+      - name: Upload sarif file to Github Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: docker.snyk.sarif
+      - name: Check docker image scan status
+        if: ${{ steps.docker-image-scan.outcome == 'failure' }}
+        run: exit 1
+#      - name: Publish docker image
+#        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+#        run: docker push --all-tags ${{ secrets.DOCKERHUB_USERNAME }}/devops-final-project
+
